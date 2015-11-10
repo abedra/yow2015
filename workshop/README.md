@@ -44,6 +44,13 @@ There are many options for installing ruby, but the most common are
 [rbenv](https://github.com/sstephenson/rbenv). You can use Ruby 1.9 or
 higher for this workshop.
 
+#### Go setup
+
+Along with installing go, make sure to set $GOPATH in order to provide go with a place to install dependencies. You will also need to install godep
+
+```sh
+$ go get github.com/tools/godep
+```
 
 #### OS X
 
