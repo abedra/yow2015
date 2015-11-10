@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/abedra/strangeloop2015/app",
+	"ImportPath": "github.com/abedra/yow2015/workshop/app",
 	"GoVersion": "go1.5.1",
 	"Deps": [
 		{
