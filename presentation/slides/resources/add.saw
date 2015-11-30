@@ -1,0 +1,34 @@
+print "Loading llvm bytecode";
+l <- llvm_load_module "add.bc";
+
+print "Extract reference term";
+add_ref <- llvm_extract l "add_reference" llvm_pure;
+
+print "Extract buggy term";
+add_bug <- llvm_extract l "add_with_bug" llvm_pure;
+
+print "Find bug via SAT search";
+let {{ thm1 x y = add_ref x y != add_bug x y }};
+result <- sat abc {{ thm1 }};
+print result;
+
+print "Find bug via failed proof";
+let {{ thm2 x y = add_ref x y == add_bug x y }};
+result <- prove abc {{ thm2 }};
+print result;
+
+j <- java_load_class "Add";
+
+print "Extract java terms";
+java_add_ref <- java_extract j "add_reference" java_pure;
+java_add_bug <- java_extract j "add_with_bug" java_pure;
+
+print "C reference, Java bug";
+let {{ thm3 x y = add_ref x y == java_add_bug x y }};
+result <- prove abc {{ thm3 }};
+print result;
+
+print "Java reference, C bug";
+let {{ thm4 x y = java_add_ref x y == add_bug x y }};
+result <- prove abc {{ thm4 }};
+print result;

@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Formal Verification of Secure Software Systems</title>
+
+        <meta name="description" content="A look at SAW, Cryptol, LLVM Verifier">
+        <meta name="author" content="Aaron Bedra">
+
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/solarized.css" id="theme">
+
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+         var link = document.createElement( 'link' );
+         link.rel = 'stylesheet';
+         link.type = 'text/css';
+         link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+         document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+
+        <!--[if lt IE 9]>
+                     <script src="lib/js/html5shiv.js"></script>
+                     <![endif]-->
+    </head>
+
+    <body>
+
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>Lambdajam 2015</h1>
+                    <h3>Formal Verification of Secure Software Systems</h3>
+                    <p>
+                        <small>
+                            Aaron Bedra <a href="http://twitter.com/abedra">@abedra</a><br/>
+                            Principal Engineer, Groupon
+                        </small>
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Why?</h2>
+                </section>
+
+		<section>
+		    <h2>Threat Models</h2>
+		    <img data-src="resources/mossad.png">
+		</section>
+
+		<section>
+		    <section id="fragments">
+			<h2>What we'll cover</h2>
+			<ul>
+			    <li class="fragment">Cryptol</li>
+			    <li class="fragment">SAW</li>
+			    <li class="fragment">LLVM Verifier</li>
+			    <li class="fragment">Cryptographic Protocol Shapes Analyzer (CPSA)</li>
+			</ul>
+		    </section>
+		</section>
+
+		<section>
+		    <section>
+			<h2>Cryptol</h2>
+			<img data-src="resources/Cryptol_teardrop.png">
+			<p>
+			    A domain-specific language for specifying cryptographic algorithms
+			</p>
+		    </section>
+		    <section>
+			<h2>A simple Example</h2>
+			    <pre>
+				<code data-trim class="haskell">
+sqDiff1 (x, y) = x^^2 - y^^2
+sqDiff2 (x, y) = (x-y) * (x+y)
+
+sqDiffsCorrect : ([8], [8]) -> Bit
+property sqDiffsCorrect (x, y) = sqDiff1 (x, y) == sqDiff2 (x, y)
+				</code>
+			    </pre>
+			    <pre>
+				<code data-trim class="nohighlight">
+Cryptol> :l ha.cry
+Loading module Cryptol
+Loading module Main
+Main> :t sqDiffsCorrect
+sqDiffsCorrect : ([8], [8]) -> Bit
+Main> sqDiffsCorrect (3, 5)
+True
+Main> :prove sqDiffsCorrect
+Q.E.D.
+				</code>
+			    </pre>
+		    </section>
+		    <section>
+			<h3>The goal is to make reference implementations of cryptographic algorithms</h3>
+			<pre>
+			    <code data-trim class="haskell">
+caesar : {n} ([8], String n) -> String n
+caesar (s, msg) = [ shift x | x <- msg ]
+      where map = [’A’ .. ’Z’] <<< s
+shift c = map @ (c - ’A’)
+			    </code>
+			</pre>
+		    </section>
+		    <section>
+			    <h2>And find bad or malicious implementations of cryptographic algorithms</h2>
+			    <pre>
+				    <code data-trim class="nohighlight">
+Main> :prove malicious_sha1_collision1
+Q.E.D.
+				    </code>
+			    </pre>
+		    </section>
+		</section>
+
+		<section>
+			<section>
+				<h2>Software Analysis Workbench (SAW)</h2>
+				<p>Another Galois creation that provides formal verification tools for C, Java, and Cryptol</p>
+			</section>
+			<section>
+				<h2>A basic example</h2>
+				<pre>
+					<code data-trim class="c">
+int add_reference(int x, int y) {
+  return x + y;
+}
+
+int add_with_bug(int x, int y) {
+  if (x == 5) return 42;
+  return x + y;
+}
+
+					</code>
+				</pre>
+				<pre>
+					<code data-trim class="nohighlight">
+$ clang -c -emit-llvm add.c -o add.bc
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h3>Analyze with SAW</h3>
+				<pre>
+					<code data-trim class="haskell">
+l <- llvm_load_module "add.bc";
+
+print "Extract terms";
+add_ref <- llvm_extract l "add_reference" llvm_pure;
+add_bug <- llvm_extract l "add_with_bug" llvm_pure;
+
+print "Find bug via SAT search";
+let {{ thm1 x y = add_ref x y != add_bug x y }};
+result <- sat abc {{ thm1 }};
+print result;
+
+print "Find bug via failed proof";
+let {{ thm2 x y = add_ref x y == add_bug x y }};
+result <- prove abc {{ thm2 }};
+print result;
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h3>Let SAW find the bugs</h3>
+				<pre>
+					<code data-trim class="nohighlight">
+$ saw add.saw
+Loading module Cryptol
+Loading file "add.saw"
+Loading llvm bytecode
+Extract reference term
+Extract buggy term
+Find bug via SAT search
+Sat: [("x",5),("y",35)]
+Find bug via failed proof
+Invalid: [("x",5),("y",35)]
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h3>Sprinkle in some Java</h3>
+				<pre>
+					<code data-trim class="java">
+public class Add {
+    public int add_reference(int x, int y) {
+	return x + y;
+    }
+
+    public int add_with_bug(int x, int y) {
+	if (x == 7) return 42;
+	return x + y;
+    }
+}
+					</code>
+				</pre>
+				<pre>
+					<code data-trim class="nohighlight">
+$ javac -g Add.java
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h3>Mix the language terms with SAW</h3>
+				<pre>
+					<code data-trim class="haskell">
+j <- java_load_class "Add";
+
+print "Extract java terms";
+java_add_ref <- java_extract j "add_reference" java_pure;
+java_add_bug <- java_extract j "add_with_bug" java_pure;
+
+print "C reference, Java bug";
+let {{ thm3 x y = add_ref x y == java_add_bug x y }};
+result <- prove abc {{ thm2 }};
+print result;
+
+print "Java reference, C bug";
+let {{ thm4 x y = java_add_ref x y == add_bug x y }};
+result <- prove abc {{ thm4 }};
+print result;
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h3>Find bugs across languages</h3>
+				<pre>
+					<code data-trim class="nohighlight">
+Extract java terms
+C reference, Java bug
+Invalid: [("x",7),("y",33)]
+Java reference, C bug
+Invalid: [("x",5),("y",35)]
+					</code>
+				</pre>
+			</section>
+		</section>
+
+		<section>
+			<h2>I thought this was a talk about security?</h2>
+		</section>
+
+		<section>
+			<h2>That was all just prep for the real fun</h2>
+		</section>
+
+		<section>
+			<section>
+				<h2>A more suitable example</h2>
+			</section>
+
+			<section>
+				<h2>Let's take a cryptol reference for AES</h2>
+				<pre>
+					<code data-trim class="haskell">
+aesEncrypt : ([128], [AESKeySize]) -> [128]
+aesEncrypt (pt, key) = stateToMsg (AESFinalRound (k, rounds ! 0))
+  where   (kInit, ks, k) = ExpandKey key
+          state0 = AddRoundKey(kInit, msgToState pt)
+          rounds = [state0] # [ AESRound (rk, s) | rk <- ks
+                                                 | s <- rounds
+                              ]
+
+aesDecrypt : ([128], [AESKeySize]) -> [128]
+aesDecrypt (ct, key) = stateToMsg (AESFinalInvRound (k, rounds ! 0))
+  where   (k, ks, kInit) = ExpandKey key
+          state0 = AddRoundKey(kInit, msgToState ct)
+          rounds = [state0] # [ AESInvRound (rk, s)
+                              | rk <- reverse ks
+                              | s  <- rounds
+                              ]
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>And a C implementation for AES</h2>
+				<pre>
+					<code data-trim class="C">
+void aes128BlockEncrypt(const SWord32 *pt, const SWord32 *key,
+                        SWord32 *ct)
+{
+// ha, this isn't going to fit on a slide...
+}
+
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>And verify the implementation meets the reference</h2>
+				<pre>
+					<code data-trim class="haskell">
+import "AES.cry";
+
+let {{
+  aesExtract x = aesEncrypt (pt,key)
+    where [pt,key] = split (join (reverse (groupBy`{32} x)))
+}};
+
+let main = do {
+  f <- load_aig "aes.aig";
+  g <- bitblast {{ aesExtract }};
+
+  print "Checking equivalence";
+  res <- cec f g;
+  print res;
+
+  write_aig "aes-ref.aig" {{ aesExtract }};
+};
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h2>Find costly mistakes before they impact you</h2>
+				<pre>
+					<code data-trim class="nohighlight">
+$ saw aes.saw
+Loading module Cryptol
+Loading file "aes.saw"
+Loading module AES
+Loading LLVM implementation
+Bitblasting Cryptol implementation
+Checking equivalence
+Invalid: 11566282233780696786424107357608548
+         2245194316165030070846998742492792053295122
+					</code>
+				</pre>
+			</section>
+		</section>
+
+		<section>
+			<section>
+				<h2>We made a couple of leaps there</h2>
+			</section>
+
+			<section>
+				<h2>SAW creates an And Inverter Graph (AIG) file that takes 256 bit inputs and produces 128 bit outputs</h2>
+			</section>
+
+			<section>
+				<h2>We can use the AIG file as a SAWScript function</h2>
+				<pre>
+					<code data-trim class="haskell">
+f <- read_aig "aes.aig";
+res <- prove abc {{ \x -> f x == aesExtract x }};
+print res
+					</code>
+				</pre>
+
+				<pre>
+					<code data-trim class="nohighlight">
+Invalid: 72370055773322622139731865630429942408
+         293740416025352524660990004945706024960
+					</code>
+				</pre>
+			</section>
+			<section>
+				<h2>Or you can invoke the logic synthesis tool on the models generated by the symbolic simulator</h2>
+				<pre>
+					<code data-trim class="nohighlight">
+$abc
+UC Berkeley, ABC 1.01 (compiled Mar  8 2015 01:00:49)
+abc 01> cec aes.aig aes-ref.aig
+Networks are NOT EQUIVALENT.
+Verification failed for at least 64 outputs:  po000 po005 po007 ...
+Output po000: Value in Network1 = 0. Value in Network2 = 1.
+Input pattern:  pi000=0 pi128=0 pi001=1 pi129=0 pi002=0 pi130=0
+pi003=0 pi131=0 pi004=1 pi132=0 pi005=0 pi133=0 pi006=0 pi134=0
+... output elided ...
+pi092=0 pi220=0 pi093=0 pi221=0 pi094=0 pi222=0 pi095=0 pi223=0
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>You can also generate DIMACS CNF models</h2>
+				<pre>
+					<code data-trim class="C">
+lss_write_cnf(!(pt[0] != ct[0] &&
+                pt[1] != ct[1] &&
+                pt[2] != ct[2] &&
+                pt[3] != ct[3]), "noleaks.cnf");
+					</code>
+				</pre>
+				<pre>
+					<code data-trim class="nohighlight">
+$ picosat noleaks.cnf
+					</code>
+				</pre>
+			</section>
+		</section>
+
+		<section>
+			<h2>Let's flip our view a bit</h2>
+		</section>
+
+		<section>
+			<h2>And think about the outside in</h2>
+		</section>
+
+		<section>
+			<section>
+				<h2>Cryptographic Protocol Shapes Analyzer (CPSA)</h2>
+				<p>
+					A tool for analyzing protocol executions and searching through possible execution states to determine the soundness of a given protocol
+				</p>
+			</section>
+
+			<section>
+				<h2>We could analyze cryptographic protocols, but let's do something a little different</h2>
+			</section>
+
+			<section>
+				<h2>Authentication</h2>
+			</section>
+
+			<section>
+				<h2>Imagine we have a centralized authentication service and two other http services</h2>
+			</section>
+
+			<section>
+				<h2>First, we define our auth service</h2>
+				<pre>
+					<code data-trim class="scheme">
+(defprotocol authenticate basic
+  (defrole auth-service
+    (vars (auth-service user name) (time method text) (ssl skey))
+    (trace
+      (recv (enc user (pass user) ssl))
+      (send (enc (token user time method auth-service) ssl)))
+	(uniq-orig (uuid user)))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>Then our services</h2>
+				<pre>
+					<code data-trim class="scheme">
+(defrole service
+  (vars
+    (auth-service user name)
+    (time method req resp text)
+    (ssl skey))
+  (trace
+    (recv (enc req (token user time method auth-service) ssl))
+    (send (enc resp ssl)))
+  (uniq-orig resp))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>And finally our end user</h2>
+				<pre>
+					<code data-trim class="scheme">
+(defrole end-user
+  (vars
+    (auth-service user name)
+    (time method req0 resp0 req1 resp1 text)
+    (ssl0 ssl1 ssl2 skey))
+  (trace
+    ;; authenticate
+    (send (enc user (pass user) ssl0))
+    (recv (enc (token user time method auth-service) ssl0))
+    ;; request first protected resource (resp0) from service s0
+    (send (enc req0 (token user time method auth-service) ssl1))
+    (recv (enc resp0 ssl1))
+    ;; request another protected resource (resp1) from service s1
+    (send (enc req1 (token user time method auth-service) ssl2))
+    (recv (enc resp1 ssl2)))
+          (uniq-orig (pass user))))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>Now we define the skeletons</h2>
+			</section>
+
+			<section>
+				<h2>First, we define the auth service and end user interactions</h2>
+				<pre>
+					<code data-trim class="scheme">
+(defskeleton authenticate
+  (vars
+    (a u s0 s1 name)
+    (req0 req1 resp0 resp1 text))
+  (defstrand auth-service 2
+    (auth-service a) (user u)
+    (ssl (ltk a u)))
+  (defstrand end-user 6
+    (auth-service a) (user u)
+    (ssl0 (ltk a u)) (ssl1 (ltk s0 u)) (ssl2 (ltk s1 u))
+    (req0 req0) (resp0 resp0)
+    (req1 req1) (resp1 resp1))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>Next, our service interactions</h2>
+				<pre>
+					<code data-trim class="scheme">
+(defstrand service 2
+  (auth-service a) (user u)
+  (ssl (ltk s0 u))
+  (req req0) (resp resp0))
+(defstrand service 2
+  (auth-service a) (user u)
+  (ssl (ltk s1 u))
+  (req req1) (resp resp1))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>And finally the most important part</h2>
+				<pre>
+					<code data-trim class="scheme">
+;; assume SSL is not broken
+(non-orig (ltk a u) (ltk s0 u) (ltk s1 u))
+;; assume the Auth Service signing key remains uncompromised
+(non-orig (privk "sig" a)))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>Running it shows that our service is in tact</h2>
+				<img height="400" src="resources/authenticate_good.png">
+			</section>
+
+			<section>
+				<h2>But if we "break" SSL</h2>
+				<pre>
+					<code data-trim class="scheme">
+;; assume SSL is not broken
+;;(non-orig (ltk a u) (ltk s0 u) (ltk s1 u))
+;; assume the Auth Service signing key remains uncompromised
+(non-orig (privk "sig" a)))
+					</code>
+				</pre>
+			</section>
+
+			<section>
+				<h2>Things get a little more interesting</h2>
+				<img height="500" src="resources/authenticate_bad.png">
+			</section>
+		</section>
+
+		<section>
+			<h2>There have been lots of innovations in this space over the past few years</h2>
+		</section>
+
+		<section>
+			<h2>You may not have to deal with the mossad, but you can make a difference</h2>
+		</section>
+
+		<section>
+			<h2>And you can do the dilligence to make sure you are doing things right</h2>
+		</section>
+
+                <section style="text-align: left;">
+			<h1>References</h1>
+                    <p>
+			    - <a href="http://saw.galois.com">saw.galois.com</a> <br/>
+                            - <a href="http://cryptol.net/">cryptol.net</a> <br/>
+			    - <a href="https://github.com/GaloisInc/llvm-verifier">github.com/GaloisInc/llvm-verifier</a> <br/>
+			    - <a href="http://www.mitre.org/publications/technical-papers/completeness-of-cpsa">www.mitre.org/publications/technical-papers/completeness-of-cpsa</a>
+
+                    </p>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
+
+        <script>
+
+         // Full list of configuration options available at:
+         // https://github.com/hakimel/reveal.js#configuration
+         Reveal.initialize({
+             controls: true,
+             progress: true,
+             history: true,
+             center: true,
+
+             transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+             // Optional reveal.js plugins
+             dependencies: [
+                 { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                 { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                 { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                 { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+                 { src: 'plugin/zoom-js/zoom.js', async: true },
+                 { src: 'plugin/notes/notes.js', async: true }
+             ]
+         });
+
+        </script>
+
+    </body>
+</html>

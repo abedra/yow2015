@@ -1,0 +1,31 @@
+import "sha1.cry";
+
+// Ten characters of arbitrary input text
+text <- fresh_symbolic "text" {| [10][8] |};
+
+// A fresh variable to represent the initial value of the "result"
+// array, which should all be overwritten.
+result <- fresh_symbolic "result" {| [5][32] |};
+
+l <- llvm_load_module "broken_sha1.bc";
+
+// The number of elements each pointer parameter should point to.
+let allocs = [("input", 10), ("result", 5)];
+
+// The initial values of all parameters (some symbolic)
+let inits = [ ("*input", text, 10)
+            , ("length", {{ 10 : [64] }}, 1)
+            , ("*result", result, 5)
+            ];
+
+// The state elements to consider results
+let results = [("*result", 5)];
+c_sha1_imp <- llvm_symexec l "sha1_calcHashBuf" allocs inits results;
+
+print "C imp <-> Cryptol imp";
+
+// Replace symbolic variables with abstracted parameters
+thm1 <- abstract_symbolic {{ sha1 text == c_sha1_imp }};
+
+// Prove!
+prove abc thm1;

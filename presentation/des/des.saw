@@ -1,0 +1,17 @@
+print "DES reference works properly";
+
+m <- cryptol_load "DES.cry";
+let enc = {{ m::DES.encrypt }};
+let dec = {{ m::DES.decrypt }};
+let {{ thm key msg = dec key (enc key msg) == msg }};
+prove_print abc {{ thm }};
+
+/*
+print "DES reference <-> DES C implementation";
+
+l <- llvm_load_module "des.bc";
+c_des_enc <- llvm_extract l "encrypt" llvm_pure;
+c_des_dec <- llvm_extract l "decrypt" llvm_pure;
+let {{ thm1 key msg = dec key (enc key msg) == c_des_dec key (c_des_enc key msg) }};
+prove_print abc {{ thm1 }};
+*/

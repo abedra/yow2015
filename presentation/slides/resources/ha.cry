@@ -1,0 +1,5 @@
+sqDiff1 (x, y) = x^^2 - y^^2
+sqDiff2 (x, y) = (x-y) * (x+y)
+
+sqDiffsCorrect : ([8], [8]) -> Bit
+property sqDiffsCorrect (x, y) = sqDiff1 (x, y) == sqDiff2 (x, y)

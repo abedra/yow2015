@@ -1,0 +1,10 @@
+m <- cryptol_load "sha1.cry";
+
+let sha1 = {{ m::SHA1.sha }};
+
+l <- llvm_load_module "sha1.bc";
+c_sha1_imp <- llvm_extract l "sha1" llvm_pure;
+
+print "C imp <-> Cryptol imp";
+let {{ thm1 msg = sha1 msg == sha1 msg }};
+prove_print abc thm1;
