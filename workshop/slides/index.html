@@ -37,12 +37,11 @@
     <div class="reveal">
       <div class="slides">
         <section>
-          <h1>Strangeloop 2015</h1>
+          <h1>YOW! 2015</h1>
           <h3>Building A Dynamic Security Response Environment</h3>
           <p>
             <small>
-              Created by Aaron Bedra / <a href="http://twitter.com/abedra">@abedra</a><br/>
-              Principal Engineer, Groupon
+              Aaron Bedra / <a href="http://twitter.com/abedra">@abedra</a><br/>
             </small>
           </p>
         </section>
@@ -166,7 +165,7 @@ location / {
 	  <h2>How does it work?</h2>
 	</section>
 
-	<section data-background="repsheet.png" data-background-size="1024px">
+	<section data-background="repsheet.png" data-background-size="600px">
 
 	</section>
 
@@ -177,10 +176,6 @@ location / {
 	    <li>librepsheet (repsheet logic)</li>
 	    <li>NGINX (embedded module)</li>
 	  </ul>
-	</section>
-
-	<section>
-	  <h2>We will only focus on the NGINX module for this workshop</h2>
 	</section>
 
 	<section>
@@ -196,7 +191,7 @@ repsheet_user_lookup on;              # main conf
 repsheet_ip_lookup on;                # main conf
 
 repsheet_redis_host localhost;        # main conf
-repsheet_redis_port 6379; # main conf
+repsheet_redis_port 6379;             # main conf
 repsheet_redis_connection_timeout 5;  # main conf
 repsheet_redis_read_timeout 10;       # main conf
 
@@ -393,7 +388,7 @@ func repsheetHandler(next http.Handler) http.Handler {
 	  <h2>Example</h2>
 	  <pre>
 	    <code data-trim class="nohighlight">
-$ cd repsheet/repsheet-0.0.1
+$ cd repsheet/repsheet-0.0.2
 $ go build repsheeet.go
 $ ./repsheet -list
 blacklisted actors
@@ -410,15 +405,15 @@ marked actors
 	    <code data-trim class="nohighlight">
 $ ./repsheet -h
 Usage of ./repsheet:
-  -blacklist="": Blacklist an actor
-  -host="localhost": Redis host
-  -list=false: Show the contents of Repsheet
-  -mark="": Mark an actor
-  -port=6379: Redis port
-  -reason="": Reason for the action
-  -status="": Get the status of an actor
-  -timeout=10: Redis connection timeout
-  -whitelist="": Whitelist an actor
+  -blacklist string  Blacklist an actor
+  -host string       Redis host (default "localhost")
+  -list    	     Show the contents of Repsheet
+  -mark string       Mark an actor
+  -port int    	     Redis port (default 6379)
+  -reason string     Reason for the action
+  -status string     Get the status of an actor
+  -timeout int       Redis connection timeout (default 10)
+  -whitelist string  Whitelist an actor
 	    </code>
 	  </pre>
 	</section>
