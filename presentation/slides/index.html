@@ -183,7 +183,7 @@ $ ghci caesar.hs caesar.so
 	      <pre>
 		<code data-trim class="haskell">
 native_caesar :: Int -&gt; String -&gt; IO String
-caesar :: Int -&gt; String -&gt; String
+caesar        :: Int -&gt; String -&gt; String
 		</code>
 	      </pre>
 	    </section>
@@ -203,7 +203,7 @@ unsafeEq x y = unsafePerformIO(x) == y
 	    </section>
 
 	    <section>
-	      <h2>We can now write a property. Given an input ensure that the output is the same</h2>
+	      <h2>We can now write a property. Given an input ensure that the output of both functions is equivalent</h2>
 	      <pre>
 		<code data-trim class="haskell">
 equivalenceProperty = forAll genSafeString $ \str -&gt;
@@ -335,7 +335,7 @@ Main&gt; caesar (2, "ATTACKATDAWN")
 	    </section>
 
 	    <section>
-	      <h2>We also get SMT and SAT solvers along with QuickCheck</h2>
+	      <h2>We also get an SMT solver along with QuickCheck</h2>
 	    </section>
 
 	    <section>
@@ -421,8 +421,7 @@ $ saw add.saw
 Loading module Cryptol
 Loading file "add.saw"
 Loading llvm bytecode
-Extract reference term
-Extract buggy term
+Extract terms
 Find bug via SAT search
 Sat: [("x",5),("y",35)]
 Find bug via failed proof
@@ -491,7 +490,7 @@ Invalid: [("x",5),("y",35)]
 	    </section>
 
 	    <section>
-	      <h2>Now we have a better model and more powerful interop</h2>
+	      <h2>Now we have a better model and more powerful interop*</h2>
 	    </section>
 	  </section>
 
@@ -608,6 +607,14 @@ pi092=0 pi220=0 pi093=0 pi221=0 pi094=0 pi222=0 pi095=0 pi223=0
 		</code>
 	      </pre>
 	    </section>
+
+	    <section>
+	      <h2>These are incredibly powerful tools at your disposal</h2>
+	    </section>
+
+	    <section>
+	      <h2>Learning how to use them properly will take some time</h2>
+	    </section>
 	  </section>
 
 	  <section>
@@ -650,7 +657,7 @@ pi092=0 pi220=0 pi093=0 pi221=0 pi094=0 pi222=0 pi095=0 pi223=0
     (trace
       (recv (enc user (pass user) ssl))
       (send (enc (token user time method auth-service) ssl)))
-	(uniq-orig (uuid user)))
+    (uniq-orig (uuid user)))
 		</code>
 	      </pre>
 	    </section>
@@ -691,7 +698,7 @@ pi092=0 pi220=0 pi093=0 pi221=0 pi094=0 pi222=0 pi095=0 pi223=0
     ;; request another protected resource (resp1) from service s1
     (send (enc req1 (token user time method auth-service) ssl2))
     (recv (enc resp1 ssl2)))
-          (uniq-orig (pass user))))
+  (uniq-orig (pass user))))
 		</code>
 	      </pre>
 	    </section>
