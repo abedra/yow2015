@@ -52,6 +52,16 @@ fetch_repsheet() {
     printf "$GREEN[done]$RESET\n"
 }
 
+fetch_visualizer() {
+    printf "Fetching visualizer ... "
+    pushd repsheet > /dev/null 2>&1
+    curl -s -O -L https://github.com/repsheet/visualizer/archive/2.3.0.tar.gz
+    tar xzf 2.3.0.tar.gz
+    rm 2.3.0.tar.gz
+    popd > /dev/null 2>&1
+    printf "$GREEN[done]$RESET\n"
+}
+
 clean() {
     rm -rf repsheet
 }
@@ -66,4 +76,5 @@ else
     fetch_librepsheet
     fetch_repsheet_nginx
     fetch_repsheet
+    fetch_visualizer
 fi

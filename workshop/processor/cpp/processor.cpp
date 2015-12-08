@@ -1,5 +1,3 @@
-// g++ processor.cpp -o processor -std=c++11 -I/usr/local/Cellar/boost/1.59.0/include -L/usr/local/Cellar/boost/1.59.0/lib -lboost_program_options -lredis3m
-
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -13,7 +11,7 @@ using namespace std;
 
 int main(int argc, char **argv) {
   namespace po = boost::program_options;
-  po::options_description description("MyTool Usage");
+  po::options_description description("Processor Usage");
 
   description.add_options()
     ("help,h", "Display this help message")
@@ -71,7 +69,7 @@ int main(int argc, char **argv) {
       if (actor.second > threshold) {
         ostringstream command;
         command << actor.first << ":repsheet:ip:blacklisted";
-	conn->run(redis3m::command("SET") << command.str() << "log parser");
+        conn->run(redis3m::command("SET") << command.str() << "log parser");
         cout << "Blacklisting " << actor.first << ". Threshold: " << threshold << ", Actual: " << actor.second << endl;
       }
     }
