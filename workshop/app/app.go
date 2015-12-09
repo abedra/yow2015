@@ -68,6 +68,10 @@ func AdminHandler(response http.ResponseWriter, request *http.Request) {
         templates.ExecuteTemplate(response, "admin.html", Page{Title: "Admin"})
 }
 
+func notFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+}
+
 func main() {
 	logFile, err := os.OpenFile("logs/app.log", os.O_WRONLY | os.O_CREATE | os.O_APPEND, 0666)
 	if err != nil {
@@ -79,9 +83,11 @@ func main() {
         r.Handle("/", handlers.ProxyHeaders(handlers.LoggingHandler(logFile, repsheetHandler(http.HandlerFunc(LoginHandler)))))
         r.Handle("/admin", handlers.ProxyHeaders(handlers.LoggingHandler(logFile, repsheetHandler(http.HandlerFunc(AdminHandler)))))
         r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.NotFoundHandler = handlers.LoggingHandler(logFile, http.HandlerFunc(notFound))
+
         http.Handle("/", r)
 
-        err = http.ListenAndServe("localhost:8080", r)
+        err = http.ListenAndServe(":8080", r)
         if err != nil {
                 log.Fatal("Error starting server: ", err)
         }
