@@ -7,7 +7,7 @@ char *caesar(int shift, char *input) {
   char *output = malloc(strlen(input));
   memset(output, '\0', strlen(input));
 
-  for (int x = 0; x <= strlen(input); x++) {
+  for (int x = 0; x < strlen(input); x++) {
     if (isalpha(input[x])) {
       int c = toupper(input[x]);
       c = (((c - 65) + shift) % 26) + 65;

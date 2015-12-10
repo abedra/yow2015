@@ -19,11 +19,11 @@ caesar :: Int -> String -> String
 caesar k = map f
   where
     f c
-        | inRange ('a','z') c || inRange ('A','Z') c = chr $ ord 'A' + (ord (toUpper c) - ord 'A' + k) `mod` 26
+        | inRange ('A','Z') c = chr $ ord 'A' + (ord c - ord 'A' + k) `mod` 26
         | otherwise = c
 
-unCaesar :: Int -> String -> String
-unCaesar k = caesar (-k)
+dCaesar :: Int -> String -> String
+dCaesar k = caesar (-k)
 
 unsafeEq :: IO String -> String -> Bool
 unsafeEq x y = unsafePerformIO(x) == y
@@ -40,6 +40,6 @@ newtype SafeString = SafeString { unwrapSafeString :: String }
 instance Arbitrary SafeString where
   arbitrary = SafeString <$> genSafeString
 
-equivalenceProperty = forAll genSafeString $ \str -> unsafeEq (native_caesar 2 str) (caesar 2 str)
+safeEquivalenceProperty = forAll genSafeString $ \str -> unsafeEq (native_caesar 2 str) (caesar 2 str)
 
-deepCheck p = quickCheckWith stdArgs{ maxSuccess = 1000000 } p
+deepCheck p = quickCheckWith stdArgs{ maxSuccess = 10000 } p
